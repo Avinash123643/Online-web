@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AetherMart - Discover Premium Products</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Subtle Slate & Teal -->
+    <!-- Application Structure Plan: The site uses a fixed, elevated header for core navigation and cart status. The main content area is divided into a prominent hero section for immediate engagement, followed by a dynamically filterable product grid. Categories are presented as visually distinct "tabs" or buttons, allowing users to quickly switch views and explore product offerings. A search bar provides instant filtering, enhancing product discoverability. The overall structure is clean and responsive, optimizing for both browsing and targeted searches, reflecting a professional storefront. -->
+    <!-- Visualization & Content Choices: 
+        - Product Cards: Report Info -> Product details. Goal -> Inform & display products professionally with new aesthetic. Viz -> Enhanced HTML/CSS cards now featuring a prominent circular image at the top, with product name and details below it. Interaction -> Clickable "Add to Cart" with visual feedback. Justification -> Fulfills user request for circular image display and creates a unique visual identity, while maintaining a professional feel. Method -> Dynamically generated HTML with updated Tailwind classes for circular images and stacked content.
+        - Search Animation: Report Info -> User interaction feedback. Goal -> Enhance user experience during search/filter. Viz -> Subtle fade-in and slight translate-up animation on product cards. Interaction -> Triggered upon re-rendering products due to filter/search changes. Justification -> Provides smooth visual feedback and makes the filtering process feel more dynamic and responsive. Method -> CSS transitions and JS class toggling.
+        - Category Tabs/Buttons: Report Info -> Product categories. Goal -> Organize & enable filtering. Viz -> Prominent, interactive buttons/tabs. Interaction -> Filter products by selected category, with active state highlighting. Justification -> Intuitive and efficient navigation for users to browse specific product groups. Method -> HTML buttons with JS active class toggling and filtering logic.
+        - Search Bar: Report Info -> Product names/descriptions. Goal -> Enable targeted discovery. Viz -> Standard input field. Interaction -> Live search filtering. Justification -> Essential for users seeking specific items. Method -> HTML input with JS event listener for dynamic filtering.
+        - Cart Indicator & Modal: Report Info -> Order items (simulated). Goal -> Provide immediate feedback on user actions and allow review of added items. Viz -> Numeric count alongside a cart icon, and a modal dialog for displaying detailed cart contents. Interaction -> Updates on "Add to Cart" clicks, and clickable "View Cart" button to open modal, with clear close mechanism. Justification -> Offers comprehensive cart management within the single-page structure without navigating away. Method -> HTML span with JS count update, and a hidden HTML modal element controlled by JS for visibility and content rendering.
+        - About Section: Report Info -> Company background. Goal -> Inform about the brand. Viz -> Text blocks with headings. Interaction -> Navigable via header link, reveals/hides section. Justification -> Provides essential brand information and builds trust. Method -> HTML sections with Tailwind for layout, controlled by JS for visibility.
+        - Contact Section: Report Info -> Contact details. Goal -> Enable user communication. Viz -> Text blocks with contact info. Interaction -> Navigable via header link, reveals/hides section. Justification -> Crucial for customer support and inquiries. Method -> HTML sections with Tailwind for layout, controlled by JS for visibility.
+        - Product Detail Page: Report Info -> Individual product details. Goal -> Provide in-depth product information before purchase, including image magnification and multiple views. Viz -> Dedicated full-width section with a main image container that supports zoom on hover, and a row of clickable thumbnail images. Detailed text and pricing are also included. Interaction -> Navigated to by clicking product card (excluding add-to-cart button), hover for zoom, click thumbnails to change main image, includes its own add-to-cart button and a 'Back to Shop' button. Justification -> Offers a highly interactive and informative product viewing experience that replicates modern e-commerce features. Method -> HTML section with dynamic content population via JS, including advanced mouse event handling for image zoom.
+        - Homepage Hero Animation: Report Info -> Overall aesthetic. Goal -> Add subtle dynamic visual interest to the homepage. Viz -> Gradient background that subtly shifts its position over time. Interaction -> Passive, continuous animation when the hero section is active. Justification -> Enhances the professional and modern feel of the homepage without distracting from content. Method -> CSS `@keyframes` animation applied directly to the hero section's background.
+        - Loading Animation: Report Info -> User feedback during page load. Goal -> Indicate that the page is loading and reduce perceived wait time. Viz -> Full-screen overlay with a simple spinning animation and "Loading..." text. Interaction -> Appears on page load, disappears when `window.onload` fires. Justification -> Provides a professional and user-friendly experience during initial page render. Method -> CSS for overlay and animation, JavaScript `onload` event to control visibility. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif; /* Changed body font */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        h1, h2, h3, h4, .font-extrabold { /* Applied Playfair Display to headings and specific bold text */
+            font-family: 'Playfair Display', serif;
+        }
+        .product-card {
+            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, opacity 0.3s ease-out; /* Added opacity for animation */
+            opacity: 0; /* Initial state for animation */
+            transform: translateY(10px); /* Initial state for animation */
+            cursor: pointer; /* Indicate clickable */
+        }
+        .product-card.fade-in {
+            opacity: 1; /* Final state for animation */
+            transform: translateY(0); /* Final state for animation */
+        }
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.15), 0 5px 10px -2px rgba(0, 0, 0, 0.08);
+        }
+        .category-tab {
+            transition: all 0.2s ease-in-out;
+        }
+        .category-tab.active {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .view-section {
+            display: none; /* Hidden by default, shown by JS */
+        }
+        .view-section.active {
+            display: block;
+        }
+        /* Modal specific styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            border-radius: 0.75rem; /* Tailwind's rounded-xl */
+            padding: 2rem; /* Tailwind's p-8 */
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh; /* Limit height for scrollable content */
+            overflow-y: auto; /* Enable scrolling for long content */
+            position: relative;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .modal-overlay.show .modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Search input animation styles */
+        #search-input {
+            transition: all 0.3s ease-in-out;
+        }
+        #search-input:focus {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2);
+        }
+
+        /* Hero section content animations */
+        .hero-animate-item {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+        }
+        .hero-animate-item.animated {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .hero-animate-item.animated:nth-child(1) { transition-delay: 0.1s; }
+        .hero-animate-item.animated:nth-child(2) { transition-delay: 0.3s; }
+        .hero-animate-item.animated:nth-child(3) { transition-delay: 0.5s; }
+
+        /* Homepage Background Motion Design Animation */
+        #hero {
+            background-image: linear-gradient(135deg, #e0f2f7 0%, #a7d9f2 50%, #87ceeb 100%); /* Sky blue gradient */
+            background-size: 200% 200%; /* Make it larger to allow shifting */
+            animation: gradientShift 15s ease infinite alternate; /* Define animation */
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 100% 100%; }
+        }
+
+        /* Image Magnifier/Zoom styles */
+        .magnify-container {
+            width: 100%; /* Default width */
+            height: 0;
+            padding-bottom: 100%; /* Maintain 1:1 aspect ratio */
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem; /* rounded-xl */
+            border: 4px solid #f1f5f9; /* border-slate-100 */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+        }
+        @media (min-width: 768px) { /* Medium screens and up */
+            .magnify-container {
+                width: 400px; /* Fixed width on desktop, adjust as needed */
+                height: 400px; /* Fixed height on desktop */
+                padding-bottom: 0; /* No padding-bottom needed for fixed height */
+            }
+        }
+
+
+        .magnify-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: 100% 100%; /* Default scale */
+            transition: background-size 0.1s ease-out, background-position 0.05s ease-out; /* Smooth transition for zoom */
+            cursor: crosshair; /* Indicative cursor for zoom */
+        }
+
+        .magnify-image.zoomed {
+            background-size: 250% 250%; /* More significant zoom */
+        }
+
+        .thumbnail-image {
+            transition: transform 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        }
+        .thumbnail-image:hover {
+            transform: scale(1.05);
+        }
+        .thumbnail-image.selected {
+            border-color: #0f766e; /* Teal-600 */
+            box-shadow: 0 0 0 2px #0f766e;
+        }
+
+        /* Loading Overlay Styles */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff; /* White background */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999; /* Ensure it's on top of everything */
+            opacity: 1;
+            transition: opacity 0.5s ease-out; /* Fade out transition */
+        }
+
+        #loading-overlay.fade-out {
+            opacity: 0;
+            pointer-events: none; /* Disable interaction after fade-out starts */
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #0f766e; /* Teal color for spinner */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Logo and Button 3D Effect */
+        .apply-3d-effect {
+            perspective: 1000px; /* Crucial for 3D effect on children */
+            transform-style: preserve-3d; /* Allows nested 3D transforms if needed */
+        }
+
+        .button-3d-effect-active {
+            transform: translateZ(15px) rotateX(5deg) rotateY(5deg) scale(1.05); /* Pop out, slight rotation, slight scale */
+            transition: transform 0.15s ease-out;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* Add shadow for depth */
+        }
+
+        /* Specific styles for the main company logo */
+        #company-logo {
+            transition: transform 0.3s ease-out; /* Slower transition for logo */
+        }
+        #company-logo.logo-3d-effect {
+            transform: translateZ(50px) rotateY(15deg) scale(1.1); /* Original logo pop out effect */
+        }
+        #company-logo:hover {
+            transform: scale(1.05); /* Subtle hover effect */
+        }
+
+        /* Adjustments for elements that are naturally buttons or anchors behaving as buttons */
+        .nav-link,
+        .category-tab,
+        .add-to-cart-btn,
+        #detail-add-to-cart-btn,
+        #back-to-shop-btn,
+        #view-cart-btn,
+        #close-cart-modal,
+        .modal-content button {
+            transition: transform 0.15s ease-out, box-shadow 0.15s ease-out; /* Add transition for smoothness */
+            transform-style: preserve-3d; /* Enable 3D transforms */
+            cursor: pointer;
+        }
+
+        .nav-link.button-3d-effect-active,
+        .category-tab.button-3d-effect-active,
+        .add-to-cart-btn.button-3d-effect-active,
+        #detail-add-to-cart-btn.button-3d-effect-active,
+        #back-to-shop-btn.button-3d-effect-active,
+        #view-cart-btn.button-3d-effect-active,
+        #close-cart-modal.button-3d-effect-active,
+        .modal-content button.button-3d-effect-active {
+            transform: translateZ(10px) translateY(-2px); /* Slight pop out and lift */
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p class="text-xl text-slate-700 font-semibold">Loading AetherMart...</p>
+    </div>
+
+    <div id="app" class="min-h-screen antialiased">
+        <header class="bg-white/[0.2] backdrop-blur-sm border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+                <div id="company-logo-container" class="flex items-center space-x-3 apply-3d-effect">
+                    <!-- Company Logo -->
+                    <img id="company-logo" src="https://placehold.co/40x40/0f766e/ffffff?text=Logo" alt="Company Logo" class="h-10 w-10 rounded-full cursor-pointer">
+                    <a href="#" class="text-3xl font-extrabold text-slate-900 tracking-tight">AetherMart</a>
+                </div>
+                <nav class="hidden md:flex items-center space-x-8 text-lg font-medium">
+                    <a href="#" class="nav-link text-slate-600 hover:text-teal-600 transition-colors" data-section="hero">Home</a>
+                    <a href="#" class="nav-link text-slate-600 hover:text-teal-600 transition-colors" data-section="products-section">Shop</a>
+                    <a href="#" class="nav-link text-slate-600 hover:text-teal-600 transition-colors" data-section="about-section">About</a>
+                    <a href="#" class="nav-link text-slate-600 hover:text-teal-600 transition-colors" data-section="contact-section">Contact</a>
+                </nav>
+                <div class="flex items-center space-x-6">
+                    <button id="view-cart-btn" class="flex items-center text-xl text-slate-600 hover:text-teal-600 transition-colors focus:outline-none">
+                        🛒 <span id="cart-count" class="font-bold text-teal-600 ml-1">0</span>
+                    </button>
+                    <!-- You could add a user icon here -->
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Hero Section -->
+            <section id="hero" class="view-section active relative py-24 sm:py-32 overflow-hidden">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+                    <h2 class="hero-animate-item text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6">
+                        Discover Excellence in Every Product.
+                    </h2>
+                    <p class="hero-animate-item text-xl text-slate-600 max-w-3xl mx-auto mb-10">
+                        Explore our curated selection of high-quality items across various categories, crafted to enhance your lifestyle.
+                    </p>
+                    <a href="#" class="hero-animate-item nav-link inline-flex items-center px-8 py-4 border border-transparent text-lg font-semibold rounded-full shadow-lg text-white bg-teal-600 hover:bg-teal-700 transition-transform duration-200 transform hover:-translate-y-1" data-section="products-section">
+                        Shop All Products
+                        <span class="ml-2">→</span>
+                    </a>
+                </div>
+                <!-- Subtle background shapes/gradients could be added here if desired -->
+            </section>
+
+            <!-- Products Section -->
+            <section id="products-section" class="view-section py-16 sm:py-20">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-12 space-y-4 sm:space-y-0">
+                        <h3 class="text-3xl font-bold text-slate-900" id="current-category-title">All Products</h3>
+                        <div class="relative w-full sm:w-80">
+                            <input type="text" id="search-input" placeholder="Search products..." class="w-full px-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-teal-500 focus:border-teal-500 text-slate-700 shadow-sm">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                        </div>
+                    </div>
+
+                    <!-- Category Tabs/Filters -->
+                    <div id="category-tabs" class="flex flex-wrap gap-3 mb-12">
+                        <button data-category="All" class="category-tab active px-6 py-2 rounded-full border border-teal-600 bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors text-sm">All Products</button>
+                        <!-- Category buttons injected here by JS -->
+                    </div>
+
+                    <!-- Product List Grid -->
+                    <div id="product-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        <!-- Product cards will be injected here by JS -->
+                    </div>
+                    <p id="no-products-message" class="hidden text-center text-xl text-slate-500 mt-12">No products found matching your criteria.</p>
+                </div>
+            </section>
+
+            <!-- Product Detail Section -->
+            <section id="product-detail-section" class="view-section hidden py-16 sm:py-20">
+                <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <button id="back-to-shop-btn" class="inline-flex items-center text-slate-600 hover:text-teal-600 transition-colors mb-8 focus:outline-none">
+                        ← Back to Shop
+                    </button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+                        <div class="flex flex-col items-center">
+                            <div id="magnify-container" class="magnify-container">
+                                <div id="magnify-image" class="magnify-image"></div>
+                            </div>
+                            <div id="thumbnail-gallery" class="flex flex-wrap justify-center gap-2 mt-4">
+                                <!-- Thumbnails will be injected here -->
+                            </div>
+                        </div>
+                        <div>
+                            <h2 id="detail-product-name" class="text-4xl font-bold text-slate-900 mb-4"></h2>
+                            <p class="text-xl font-semibold text-slate-700 mb-4">
+                                <span id="detail-product-discounted-price" class="text-teal-600 text-3xl mr-2"></span>
+                                <span id="detail-product-original-price" class="text-slate-500 line-through"></span>
+                                <span id="detail-product-discount-badge" class="ml-3 bg-red-100 text-red-700 text-sm font-bold px-3 py-1 rounded-full hidden"></span>
+                            </p>
+                            <p id="detail-product-description" class="text-lg text-slate-600 leading-relaxed mb-8"></p>
+                            <button id="detail-add-to-cart-btn" data-product-id="" class="bg-teal-600 text-white px-8 py-3 rounded-md text-lg font-semibold hover:bg-teal-700 transition-colors shadow-lg w-full md:w-auto">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- About Section -->
+            <section id="about-section" class="view-section hidden py-16 sm:py-20">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h2 class="text-4xl font-bold text-slate-900 mb-6 text-center">About AetherMart</h2>
+                    <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+                        Welcome to AetherMart, your premier destination for exceptional products that blend innovation, quality, and style. Founded with a vision to simplify and elevate your shopping experience, we meticulously curate every item in our collection, ensuring it meets our stringent standards for excellence.
+                    </p>
+                    <p class="text-lg text-slate-600 mb-8 leading-relaxed">
+                        At AetherMart, we believe in providing not just products, but solutions that enhance daily life. From cutting-edge electronics to handcrafted accessories, and from essential home goods to robust outdoor gear, our diverse categories are designed to cater to your every need and passion. We partner with trusted brands and artisans who share our commitment to craftsmanship and customer satisfaction.
+                    </p>
+                    <p class="text-lg text-slate-600 leading-relaxed">
+                        Our mission extends beyond commerce; we aim to build a community where quality and trust are paramount. We are dedicated to sustainable practices, ethical sourcing, and providing unparalleled customer service. Thank you for choosing AetherMart – where your satisfaction is our highest priority.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Contact Section -->
+            <section id="contact-section" class="view-section hidden py-16 sm:py-20">
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 bg-white p-8 rounded-xl shadow-lg border border-slate-200">
+                    <h2 class="text-4xl font-bold text-slate-900 mb-6 text-center">Contact Us</h2>
+                    <p class="text-lg text-slate-600 mb-8 leading-relaxed text-center">
+                        We're here to help! Whether you have a question about our products, need assistance with an order, or just want to provide feedback, please don't hesitate to reach out.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-center md:text-left">
+                        <div>
+                            <h3 class="text-2xl font-semibold text-slate-800 mb-3">Customer Support</h3>
+                            <p class="text-lg text-slate-600 mb-2">Email: <a href="mailto:support@aethermart.com" class="text-teal-600 hover:underline">support@aethermart.com</a></p>
+                            <p class="text-lg text-slate-600">Phone: <a href="tel:+1234567890" class="text-teal-600 hover:underline">+1 (234) 567-890</a></p>
+                            <p class="text-sm text-slate-500 mt-2">Available Mon-Fri, 9 AM - 5 PM EST</p>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-semibold text-slate-800 mb-3">Our Location</h3>
+                            <p class="text-lg text-slate-600">AetherMart HQ</p>
+                            <p class="text-lg text-slate-600">123 Commerce Lane</p>
+                            <p class="text-lg text-slate-600">Suite 456</p>
+                            <p class="text-lg text-slate-600">Innovate City, CA 90210</p>
+                            <p class="text-lg text-slate-600">USA</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="bg-slate-800 text-slate-300 py-10">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm">
+                <p>&copy; 2024 AetherMart. All rights reserved.</p>
+                <div class="mt-4 space-x-4">
+                    <a href="#" class="hover:text-teal-400 transition-colors">Privacy Policy</a>
+                    <a href="#" class="hover:text-teal-400 transition-colors">Terms of Service</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Cart Modal -->
+    <div id="cart-modal-overlay" class="modal-overlay">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h3 class="text-3xl font-bold text-slate-900">Your Shopping Cart</h3>
+                <button id="close-cart-modal" class="text-slate-500 hover:text-slate-700 text-3xl font-light leading-none focus:outline-none">
+                    &times;
+                </button>
+            </div>
+            <div id="cart-items-container" class="space-y-6 mb-8 max-h-80 overflow-y-auto">
+                <!-- Cart items will be rendered here -->
+            </div>
+            <div id="empty-cart-message" class="text-center text-slate-500 text-lg hidden">
+                Your cart is empty. Start shopping!
+            </div>
+            <div class="flex justify-between items-center pt-4 border-t">
+                <span class="text-2xl font-bold text-slate-900">Total: <span id="cart-total">$0.00</span></span>
+                <button class="bg-teal-600 text-white px-8 py-3 rounded-md text-lg font-semibold hover:bg-teal-700 transition-colors shadow-md">
+                    Proceed to Checkout
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const productsData = [
+            {
+                id: 1,
+                name: "Nimbus Wireless Earbuds",
+                description: "Experience immersive audio with active noise cancellation, perfect for travel or focused work. These earbuds deliver crystal-clear sound and deep bass, ensuring a superior listening experience. They come with a sleek charging case that provides up to 24 hours of total playback. Lightweight and comfortable for all-day wear.",
+                price: 199.99,
+                discount: 10, // 10% discount
+                category_id: 1, // Electronics
+                images: [
+                    "https://placehold.co/800x800/1e293b/a3e635?text=Earbuds+Front",
+                    "https://placehold.co/800x800/1e293b/d1f7ee?text=Earbuds+Side",
+                    "https://placehold.co/800x800/1e293b/f0abfc?text=Earbuds+Case"
+                ]
+            },
+            {
+                id: 2,
+                name: "Artisan Leather Messenger Bag",
+                description: "Handcrafted from genuine full-grain leather, this messenger bag combines timeless style with practical functionality. It features multiple compartments for your laptop, documents, and essentials, making it ideal for both professionals and students. Designed to age beautifully with use.",
+                price: 249.00,
+                discount: 0,
+                category_id: 2, // Fashion & Accessories
+                images: [
+                    "https://placehold.co/800x800/334155/f0abfc?text=Leather+Bag+Open",
+                    "https://placehold.co/800x800/334155/e0f2f7?text=Leather+Bag+Closed",
+                    "https://placehold.co/800x800/334155/bef264?text=Leather+Bag+Detail"
+                ]
+            },
+            {
+                id: 3,
+                name: "Smart Ceramic Kettle",
+                description: "Precision temperature control for perfect brewing, with a sleek, minimalist design. This kettle boils water rapidly and allows you to set exact temperatures for different teas and coffees, enhancing their flavor. Its ceramic body is elegant and easy to clean.",
+                price: 89.95,
+                discount: 5,
+                category_id: 3, // Home & Kitchen
+                images: [
+                    "https://placehold.co/800x800/475569/67e8f9?text=Kettle+Front",
+                    "https://placehold.co/800x800/475569/ccfbf1?text=Kettle+Lifestyle"
+                ]
+            },
+            {
+                id: 4,
+                name: "Zenith Pro Ergonomic Desk Chair",
+                description: "Designed for ultimate comfort and posture support during long work sessions. This chair features adjustable lumbar support, armrests, and headrest, allowing you to customize it perfectly to your body. Breathable mesh material keeps you cool and comfortable all day.",
+                price: 499.00,
+                discount: 15,
+                category_id: 4, // Office & Productivity
+                images: [
+                    "https://placehold.co/800x800/64748b/a78bfa?text=Office+Chair+Full",
+                    "https://placehold.co/800x800/64748b/d1f7ee?text=Office+Chair+Ergonomic"
+                ]
+            },
+            {
+                id: 5,
+                name: "Spectra 5G Smartphone",
+                description: "Blazing fast performance, professional-grade camera, and an edge-to-edge display. Capture stunning photos and videos with its advanced multi-lens system. The powerful processor ensures smooth multitasking and gaming. Long-lasting battery keeps you connected.",
+                price: 999.00,
+                discount: 0,
+                category_id: 1, // Electronics
+                images: [
+                    "https://placehold.co/800x800/0f766e/a3e635?text=Smartphone+Display",
+                    "https://placehold.co/800x800/0f766e/f0abfc?text=Smartphone+Back"
+                ]
+            },
+            {
+                id: 6,
+                name: "Aura Diffuser & Humidifier",
+                description: "Ultrasonic technology for a fine mist, enhancing air quality and ambiance with essential oils. This silent humidifier creates a soothing environment, perfect for relaxation or improving air quality in dry climates. Features a gentle LED light for mood setting.",
+                price: 55.00,
+                discount: 0,
+                category_id: 3, // Home & Kitchen
+                images: [
+                    "https://placehold.co/800x800/14b8a6/fefce8?text=Diffuser+Active",
+                    "https://placehold.co/800x800/14b8a6/e0f2f7?text=Diffuser+Close-up"
+                ]
+            },
+            {
+                id: 7,
+                name: "Pinnacle Cycling Helmet",
+                description: "Lightweight, aerodynamic, and highly protective for serious cyclists. Designed for optimal airflow and comfort during long rides, it provides superior impact protection. Adjustable fit system ensures a secure and personalized feel.",
+                price: 110.00,
+                discount: 0,
+                category_id: 5, // Sports & Outdoors
+                images: [
+                    "https://placehold.co/800x800/064e3b/e0f2f7?text=Helmet+Front",
+                    "https://placehold.co/800x800/064e3b/a7d9f2?text=Helmet+Side"
+                ]
+            },
+            {
+                id: 8,
+                name: "TerraGrip Hiking Boots",
+                description: "Waterproof and durable, offering superior traction and comfort on challenging trails. These boots provide excellent ankle support and a rugged outsole for reliable grip on various terrains. Ideal for all-weather hiking and trekking.",
+                price: 135.00,
+                discount: 10,
+                category_id: 5, // Sports & Outdoors
+                images: [
+                    "https://placehold.co/800x800/083344/bef264?text=Hiking+Boots+Outdoor",
+                    "https://placehold.co/800x800/083344/ccfbf1?text=Hiking+Boots+Sole"
+                ]
+            },
+            {
+                id: 9,
+                name: "Gourmet Espresso Machine",
+                description: "Craft barista-quality coffee at home with precise controls and steam wand. This compact machine brews rich espresso with a thick crema and allows you to froth milk for lattes and cappuccinos. Easy to use and clean for daily coffee rituals.",
+                price: 750.00,
+                discount: 0,
+                category_id: 3, // Home & Kitchen
+                images: [
+                    "https://placehold.co/800x800/1e293b/a3e635?text=Espresso+Brewing",
+                    "https://placehold.co/800x800/1e293b/f0abfc?text=Espresso+Machine+Detail"
+                ]
+            },
+            {
+                id: 10,
+                name: "Quantum Gaming Laptop",
+                description: "Unleash extreme performance for gaming and demanding tasks with cutting-edge components. Featuring a high-refresh-rate display and powerful graphics card, it delivers an immersive gaming experience. Advanced cooling ensures stable performance during intense sessions.",
+                price: 1899.99,
+                discount: 5,
+                category_id: 1, // Electronics
+                images: [
+                    "https://placehold.co/800x800/334155/f0abfc?text=Gaming+Laptop+On",
+                    "https://placehold.co/800x800/334155/bef264?text=Gaming+Laptop+Keyboard"
+                ]
+            }
+        ];
+
+        const categoriesData = [
+            { id: 1, name: "Electronics" },
+            { id: 2, name: "Fashion & Accessories" },
+            { id: 3, name: "Home & Kitchen" },
+            { id: 4, name: "Office & Productivity" },
+            { id: 5, name: "Sports & Outdoors" }
+        ];
+
+        let currentCategory = "All";
+        let searchTerm = "";
+        let cartItems = []; // Array to store products in cart
+        let activeSection = "hero"; // Track the currently active section
+
+        const productListEl = document.getElementById('product-list');
+        const categoryTabsEl = document.getElementById('category-tabs');
+        const searchInputEl = document.getElementById('search-input');
+        const cartCountEl = document.getElementById('cart-count');
+        const currentCategoryTitleEl = document.getElementById('current-category-title');
+        const noProductsMessageEl = document.getElementById('no-products-message');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const viewSections = document.querySelectorAll('.view-section');
+
+        const viewCartBtn = document.getElementById('view-cart-btn');
+        const cartModalOverlay = document.getElementById('cart-modal-overlay');
+        const closeCartModalBtn = document.getElementById('close-cart-modal');
+        const cartItemsContainer = document.getElementById('cart-items-container');
+        const cartTotalEl = document.getElementById('cart-total');
+        const emptyCartMessageEl = document.getElementById('empty-cart-message');
+
+        const productDetailSection = document.getElementById('product-detail-section');
+        const detailProductName = document.getElementById('detail-product-name');
+        const detailProductImageContainer = document.getElementById('magnify-image');
+        const detailProductOriginalPrice = document.getElementById('detail-product-original-price');
+        const detailProductDiscountedPrice = document.getElementById('detail-product-discounted-price');
+        const detailProductDiscountBadge = document.getElementById('detail-product-discount-badge');
+        const detailProductDescription = document.getElementById('detail-product-description');
+        const detailAddToCartBtn = document.getElementById('detail-add-to-cart-btn');
+        const backToShopBtn = document.getElementById('back-to-shop-btn');
+        const thumbnailGallery = document.getElementById('thumbnail-gallery');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        // Get logo element for 3D effect
+        const companyLogo = document.getElementById('company-logo');
+
+        // Select all elements that should have the 3D button effect
+        const allButtons = document.querySelectorAll(
+            '.nav-link, .category-tab, .add-to-cart-btn, #detail-add-to-cart-btn, #back-to-shop-btn, #view-cart-btn, #close-cart-modal, .modal-content button'
+        );
+
+        function updateCartCount() {
+            let totalCount = 0;
+            cartItems.forEach(item => {
+                totalCount += item.quantity;
+            });
+            cartCountEl.textContent = totalCount;
+        }
+
+        function renderProducts() {
+            productListEl.innerHTML = '';
+            let filteredProducts = productsData;
+
+            if (currentCategory !== "All") {
+                const selectedCategory = categoriesData.find(cat => cat.name === currentCategory);
+                if (selectedCategory) {
+                    filteredProducts = filteredProducts.filter(p => p.category_id === selectedCategory.id);
+                }
+            }
+
+            if (searchTerm) {
+                const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                filteredProducts = filteredProducts.filter(p =>
+                    p.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+                    p.description.toLowerCase().includes(lowerCaseSearchTerm)
+                );
+            }
+
+            if (filteredProducts.length === 0) {
+                noProductsMessageEl.classList.remove('hidden');
+            } else {
+                noProductsMessageEl.classList.add('hidden');
+                filteredProducts.forEach(product => {
+                    const productCard = document.createElement('div');
+                    productCard.className = 'product-card bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200 flex flex-col items-center text-center p-5';
+                    productCard.dataset.productId = product.id;
+                    
+                    const originalPriceHtml = product.discount > 0 ? `<span class="text-slate-500 line-through text-lg mr-1">$${product.price.toFixed(2)}</span>` : '';
+                    const discountedPrice = product.discount > 0 ? (product.price * (1 - product.discount / 100)).toFixed(2) : product.price.toFixed(2);
+                    const discountBadgeHtml = product.discount > 0 ? `<span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full absolute top-2 right-2">-${product.discount}%</span>` : '';
+
+                    productCard.innerHTML = `
+                        <div class="relative">
+                            <img src="${product.images[0]}" alt="${product.name}" class="w-48 h-48 rounded-full object-cover mb-4 border-4 border-slate-100 shadow-inner">
+                            ${discountBadgeHtml}
+                        </div>
+                        <h4 class="text-xl font-semibold text-slate-900 mb-2">${product.name}</h4>
+                        <p class="text-slate-600 text-sm mb-4 line-clamp-2">${product.description}</p>
+                        <div class="flex justify-between items-center mt-auto pt-2 w-full">
+                            <div>
+                                ${originalPriceHtml}
+                                <span class="text-2xl font-bold text-teal-600">$${discountedPrice}</span>
+                            </div>
+                            <button data-product-id="${product.id}" class="add-to-cart-btn bg-teal-600 text-white px-5 py-2 rounded-md font-semibold hover:bg-teal-700 transition-colors shadow-md">
+                                Add to Cart
+                            </button>
+                        </div>
+                    `;
+                    productListEl.appendChild(productCard);
+                    setTimeout(() => {
+                        productCard.classList.add('fade-in');
+                    }, 50);
+                });
+            }
+
+            if (searchTerm && currentCategory !== "All") {
+                 currentCategoryTitleEl.textContent = `Results in "${currentCategory}" for "${searchTerm}"`;
+            } else if (searchTerm) {
+                currentCategoryTitleEl.textContent = `Search Results for "${searchTerm}"`;
+            } else if (currentCategory !== "All") {
+                currentCategoryTitleEl.textContent = `${currentCategory}`;
+            } else {
+                currentCategoryTitleEl.textContent = `All Products`;
+            }
+        }
+
+        function renderCategoryTabs() {
+            categoriesData.forEach(category => {
+                const categoryBtn = document.createElement('button');
+                categoryBtn.dataset.category = category.name;
+                categoryBtn.className = 'category-tab px-6 py-2 rounded-full border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-100 transition-colors text-sm';
+                categoryBtn.textContent = category.name;
+                categoryTabsEl.appendChild(categoryBtn);
+            });
+            updateCategoryButtonStyles();
+        }
+
+        function updateCategoryButtonStyles() {
+            document.querySelectorAll('.category-tab').forEach(btn => {
+                if (btn.dataset.category === currentCategory) {
+                    btn.classList.add('active', 'bg-teal-600', 'text-white', 'border-teal-600');
+                    btn.classList.remove('bg-white', 'text-slate-700', 'border-slate-300', 'hover:bg-slate-100');
+                } else {
+                    btn.classList.remove('active', 'bg-teal-600', 'text-white', 'border-teal-600');
+                    btn.classList.add('bg-white', 'text-slate-700', 'border-slate-300', 'hover:bg-slate-100');
+                }
+            });
+        }
+
+        function switchSection(sectionId) {
+            viewSections.forEach(section => {
+                section.classList.remove('active');
+                section.style.display = 'none';
+            });
+            const targetSection = document.getElementById(sectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+                targetSection.style.display = 'block';
+                activeSection = sectionId;
+
+                if (sectionId !== 'hero') {
+                    window.scrollTo({
+                        top: targetSection.offsetTop - document.querySelector('header').offsetHeight,
+                        behavior: 'smooth'
+                    });
+                } else {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            navLinks.forEach(link => {
+                if (link.dataset.section === sectionId) {
+                    link.classList.add('active-nav');
+                    link.classList.remove('text-slate-600');
+                    link.classList.add('text-teal-600');
+                } else {
+                    link.classList.remove('active-nav');
+                    link.classList.remove('text-teal-600');
+                    link.classList.add('text-slate-600');
+                }
+            });
+            if (sectionId === 'products-section') {
+                renderProducts();
+                updateCategoryButtonStyles();
+            } else if (sectionId === 'hero') {
+                const heroItems = document.querySelectorAll('#hero .hero-animate-item');
+                heroItems.forEach(item => {
+                    item.classList.remove('animated');
+                    void item.offsetWidth;
+                    item.classList.add('animated');
+                });
+            }
+        }
+
+        function showCartModal() {
+            renderCart();
+            cartModalOverlay.classList.add('show');
+        }
+
+        function hideCartModal() {
+            cartModalOverlay.classList.remove('show');
+        }
+
+        function renderCart() {
+            cartItemsContainer.innerHTML = '';
+            let total = 0;
+
+            if (cartItems.length === 0) {
+                emptyCartMessageEl.classList.remove('hidden');
+                cartItemsContainer.classList.add('hidden');
+            } else {
+                emptyCartMessageEl.classList.add('hidden');
+                cartItemsContainer.classList.remove('hidden');
+                cartItems.forEach(item => {
+                    const itemTotal = (item.price * (1 - (item.discount || 0) / 100)) * item.quantity;
+                    total += itemTotal;
+                    const cartItemEl = document.createElement('div');
+                    cartItemEl.className = 'flex items-center space-x-4 p-4 bg-slate-50 rounded-lg shadow-sm';
+                    cartItemEl.innerHTML = `
+                        <img src="${item.images[0]}" alt="${item.name}" class="w-20 h-20 rounded-full object-cover border border-slate-200">
+                        <div class="flex-grow">
+                            <h4 class="font-semibold text-slate-800 text-lg">${item.name}</h4>
+                            <p class="text-slate-600 text-sm">Quantity: ${item.quantity}</p>
+                        </div>
+                        <span class="font-bold text-lg text-teal-600">$${itemTotal.toFixed(2)}</span>
+                    `;
+                    cartItemsContainer.appendChild(cartItemEl);
+                });
+            }
+            cartTotalEl.textContent = `$${total.toFixed(2)}`;
+        }
+
+        function showProductDetail(productId) {
+            const product = productsData.find(p => p.id === productId);
+            if (!product) return;
+
+            detailProductName.textContent = product.name;
+            detailProductDescription.textContent = product.description;
+            detailAddToCartBtn.dataset.productId = product.id;
+
+            if (product.discount > 0) {
+                const discountedPrice = (product.price * (1 - product.discount / 100)).toFixed(2);
+                detailProductOriginalPrice.textContent = `$${product.price.toFixed(2)}`;
+                detailProductDiscountedPrice.textContent = `$${discountedPrice}`;
+                detailProductDiscountBadge.textContent = `-${product.discount}% OFF`;
+                detailProductDiscountBadge.classList.remove('hidden');
+                detailProductOriginalPrice.classList.remove('hidden');
+            } else {
+                detailProductOriginalPrice.textContent = '';
+                detailProductOriginalPrice.classList.add('hidden');
+                detailProductDiscountedPrice.textContent = `$${product.price.toFixed(2)}`;
+                detailProductDiscountBadge.classList.add('hidden');
+            }
+
+            // Image Magnification/Gallery Logic
+            // Set initial main image
+            detailProductImageContainer.style.backgroundImage = `url('${product.images[0]}')`;
+            detailProductImageContainer.classList.remove('zoomed'); // Ensure it's not zoomed initially
+            detailProductImageContainer.style.backgroundPosition = 'center center'; // Reset position
+
+            // Clear previous thumbnails
+            thumbnailGallery.innerHTML = '';
+            product.images.forEach((imgUrl, index) => {
+                const thumb = document.createElement('img');
+                thumb.src = imgUrl;
+                thumb.alt = `${product.name} thumbnail ${index + 1}`;
+                thumb.className = `thumbnail-image w-20 h-20 object-cover rounded-md cursor-pointer border-2 border-transparent transition-colors ${index === 0 ? 'selected' : ''}`;
+                thumb.addEventListener('click', () => {
+                    detailProductImageContainer.style.backgroundImage = `url('${imgUrl}')`;
+                    detailProductImageContainer.classList.remove('zoomed'); // Reset zoom on thumbnail change
+                    detailProductImageContainer.style.backgroundPosition = 'center center'; // Reset position
+                    document.querySelectorAll('#thumbnail-gallery .thumbnail-image').forEach(t => t.classList.remove('selected'));
+                    thumb.classList.add('selected');
+                });
+                thumbnailGallery.appendChild(thumb);
+            });
+
+            switchSection('product-detail-section');
+        }
+
+        // Image Magnifier Hover Logic
+        detailProductImageContainer.addEventListener('mousemove', (e) => {
+            // Only apply magnification if on product detail page
+            if (activeSection === 'product-detail-section') {
+                const container = e.currentTarget;
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left; // x position within the element.
+                const y = e.clientY - rect.top;  // y position within the element.
+
+                const xPercent = (x / container.offsetWidth) * 100;
+                const yPercent = (y / container.offsetHeight) * 100;
+
+                // Adjust background position to simulate moving the lens
+                // (100 - zoom_percentage) * x_percentage / 100
+                const zoomFactor = 2.5; // From background-size: 250%
+                const bgPosX = (xPercent * (1 - zoomFactor)) + (50 * zoomFactor);
+                const bgPosY = (yPercent * (1 - zoomFactor)) + (50 * zoomFactor);
+
+                container.style.backgroundPosition = `${bgPosX}% ${bgPosY}%`;
+            }
+        });
+
+        detailProductImageContainer.addEventListener('mouseenter', (e) => {
+            if (activeSection === 'product-detail-section') {
+                e.currentTarget.classList.add('zoomed');
+            }
+        });
+
+        detailProductImageContainer.addEventListener('mouseleave', (e) => {
+            if (activeSection === 'product-detail-section') {
+                e.currentTarget.classList.remove('zoomed');
+                e.currentTarget.style.backgroundPosition = 'center center'; // Reset to center
+            }
+        });
+
+
+        // Event Listeners
+        categoryTabsEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('.category-tab');
+            if (btn) {
+                currentCategory = btn.dataset.category;
+                searchTerm = "";
+                searchInputEl.value = "";
+                updateCategoryButtonStyles();
+                renderProducts();
+            }
+        });
+
+        searchInputEl.addEventListener('input', (e) => {
+            searchTerm = e.target.value.trim();
+            renderProducts();
+        });
+
+        productListEl.addEventListener('click', (e) => {
+            const addToCartBtn = e.target.closest('.add-to-cart-btn');
+            if (addToCartBtn) {
+                e.stopPropagation();
+                const productId = parseInt(addToCartBtn.dataset.productId);
+                const productToAdd = productsData.find(p => p.id === productId);
+
+                const existingCartItem = cartItems.find(item => item.id === productId);
+
+                if (existingCartItem) {
+                    existingCartItem.quantity++;
+                } else {
+                    cartItems.push({ ...productToAdd, quantity: 1 });
+                }
+
+                updateCartCount();
+                
+                addToCartBtn.textContent = 'Added!';
+                addToCartBtn.classList.remove('bg-teal-600', 'hover:bg-teal-700');
+                addToCartBtn.classList.add('bg-green-600');
+                setTimeout(() => {
+                    addToCartBtn.textContent = 'Add to Cart';
+                    addToCartBtn.classList.add('bg-teal-600', 'hover:bg-teal-700');
+                    addToCartBtn.classList.remove('bg-green-600');
+                }, 1500);
+            } else {
+                const productCard = e.target.closest('.product-card');
+                if (productCard && productCard.dataset.productId) {
+                    showProductDetail(parseInt(productCard.dataset.productId));
+                }
+            }
+        });
+
+        detailAddToCartBtn.addEventListener('click', (e) => {
+            const productId = parseInt(e.target.dataset.productId);
+            const productToAdd = productsData.find(p => p.id === productId);
+
+            const existingCartItem = cartItems.find(item => item.id === productId);
+
+            if (existingCartItem) {
+                existingCartItem.quantity++;
+            } else {
+                cartItems.push({ ...productToAdd, quantity: 1 });
+            }
+
+            updateCartCount();
+
+            e.target.textContent = 'Added!';
+            e.target.classList.remove('bg-teal-600', 'hover:bg-teal-700');
+            e.target.classList.add('bg-green-600');
+            setTimeout(() => {
+                e.target.textContent = 'Add to Cart';
+                e.target.classList.add('bg-teal-600', 'hover:bg-teal-700');
+                e.target.classList.remove('bg-green-600');
+            }, 1500);
+        });
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetSectionId = e.target.dataset.section;
+                switchSection(targetSectionId);
+            });
+        });
+
+        backToShopBtn.addEventListener('click', () => switchSection('products-section'));
+        viewCartBtn.addEventListener('click', showCartModal);
+        closeCartModalBtn.addEventListener('click', hideCartModal);
+        cartModalOverlay.addEventListener('click', (e) => {
+            if (e.target === cartModalOverlay) {
+                hideCartModal();
+            }
+        });
+
+        // Add event listener for the company logo 3D effect
+        if (companyLogo) {
+            companyLogo.addEventListener('click', () => {
+                companyLogo.classList.toggle('logo-3d-effect');
+            });
+        }
+
+        // Add 3D effect to all other buttons
+        allButtons.forEach(button => {
+            // Add perspective to parents that need it for child 3D transforms
+            if (!button.closest('.apply-3d-effect') && !button.parentElement.classList.contains('apply-3d-effect')) {
+                button.style.perspective = '1000px';
+            }
+            button.addEventListener('mousedown', () => {
+                button.classList.add('button-3d-effect-active');
+            });
+            button.addEventListener('mouseup', () => {
+                button.classList.remove('button-3d-effect-active');
+            });
+            button.addEventListener('mouseleave', () => {
+                // Also remove effect if mouse leaves while pressed (e.g., dragging)
+                button.classList.remove('button-3d-effect-active');
+            });
+        });
+
+
+        // Initial render on DOM content loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCategoryTabs();
+            switchSection('hero'); 
+            updateCartCount();
+        });
+
+        // Hide loading overlay once the entire page (including images) has loaded
+        window.onload = () => {
+            // Give a small delay to ensure rendering is complete before fade out
+            setTimeout(() => {
+                loadingOverlay.classList.add('fade-out');
+                // Optionally remove the element from DOM after transition for accessibility
+                loadingOverlay.addEventListener('transitionend', () => {
+                    loadingOverlay.style.display = 'none';
+                }, { once: true });
+            }, 300); // Adjust delay as needed
+        };
+    </script>
+</body>
+</html>
